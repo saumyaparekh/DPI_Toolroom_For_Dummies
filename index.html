@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Toolroom Curriculum</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .slide { display: none; }
+        .slide.active { display: block; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-top: 4px solid #386641;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-[#FDF8F0] text-[#333333] flex flex-col items-center justify-center min-h-screen p-4 sm:p-6 md:p-8">
+    <div class="bg-[#EAE0D5] rounded-xl shadow-2xl p-6 sm:p-8 md:p-10 w-full max-w-4xl">
+        <h1 class="text-3xl font-bold text-[#386641] mb-6 text-center">Interactive Toolroom Curriculum</h1>
+
+        <div id="slides-container" class="space-y-6">
+            <!-- Slide content will be rendered here dynamically -->
+        </div>
+
+        <div id="modal-backdrop" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div id="modal-content" class="bg-white p-8 rounded-xl shadow-xl max-w-2xl w-full mx-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 id="modal-title" class="text-2xl font-bold"></h2>
+                    <button id="close-modal-btn" class="text-gray-500 hover:text-gray-700">&times;</button>
+                </div>
+                <div id="modal-body" class="max-h-[70vh] overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <div class="flex justify-between mt-8">
+            <button id="prev-btn" class="px-6 py-3 bg-[#A7C957] text-white font-semibold rounded-full shadow-lg hover:bg-[#8da747] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#A7C957] disabled:bg-gray-400 disabled:cursor-not-allowed">Previous</button>
+            <button id="next-btn" class="px-6 py-3 bg-[#A7C957] text-white font-semibold rounded-full shadow-lg hover:bg-[#8da747] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#A7C957]">Next</button>
+        </div>
+    </div>
+
+<script>
+    const curriculumData = [
+        { id: 'module-1', title: 'Foundational Onboarding', content: `
+            <h2 class="text-2xl font-bold mb-4">Module 1: Foundational Onboarding</h2>
+            <p class="mb-4 text-gray-700">This initial module provides new hires with a comprehensive introduction to the company, the toolroom environment, and their specific roles. It's the essential first step to becoming a productive member of the team.</p>
+            <div class="space-y-4">
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">Company & Toolroom Introduction</h3>
+                    <ul class="list-disc list-inside space-y-1 text-gray-800">
+                        <li>Company history, mission, and core values.</li>
+                        <li>Tour of the facility: toolroom layout, key departments, and personnel.</li>
+                        <li>Overview of products and their application in the packaging industry.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">Safety & Compliance</h3>
+                    <ul class="list-disc list-inside space-y-1 text-gray-800">
+                        <li>Mandatory safety training for machinery and workshop environments.</li>
+                        <li>Personal Protective Equipment (PPE) protocols.</li>
+                        <li>Emergency procedures and contact information.</li>
+                    </ul>
+                </div>
+            </div>`
+        },
+        { id: 'module-2', title: 'Materials Science: Plastics', content: `
+            <h2 class="text-2xl font-bold mb-4">Module 2: Materials Science - Plastics for Packaging</h2>
+            <p class="mb-4 text-gray-700">Understanding materials is crucial for quality mold design. This section covers the fundamental properties of the plastics used in the packaging industry and allows you to compare them visually.</p>
+            <div class="bg-white p-4 rounded-lg shadow-md mb-6">
+                <label for="plastic-selector" class="block text-sm font-medium text-gray-700 mb-2">Select a Plastic to Learn More:</label>
+                <select id="plastic-selector" class="w-full p-2 border border-gray-300 rounded-md">
+                    <option value="PP">Polypropylene (PP)</option>
+                    <option value="PE">Polyethylene (PE)</option>
+                    <option value="PET">Polyethylene Terephthalate (PET)</option>
+                    <option value="PS">Polystyrene (PS)</option>
+                    <option value="HDPE">High-Density Polyethylene (HDPE)</option>
+                    <option value="LDPE">Low-Density Polyethylene (LDPE)</option>
+                    <option value="ABS">Acrylonitrile Butadiene Styrene (ABS)</option>
+                    <option value="SAN">Styrene Acrylonitrile (SAN)</option>
+                    <option value="Delrin">Delrin (POM)</option>
+                </select>
+            </div>
+            <div id="plastic-details" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    <div>
+                        <h3 class="text-xl font-semibold mb-2" id="plastic-title"></h3>
+                        <p class="text-gray-800 mb-4" id="plastic-description"></p>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-lg mb-2">Key Properties</h4>
+                        <ul id="plastic-properties-list" class="list-disc list-inside space-y-1 text-gray-800"></ul>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-semibold text-lg mb-2">Use Cases & Examples</h4>
+                        <ul id="plastic-examples-list" class="list-disc list-inside space-y-1 text-gray-800 mb-4"></ul>
+                        <div id="plastic-image-container" class="rounded-lg overflow-hidden mt-4"></div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-lg mb-2">Property Comparison Chart</h4>
+                        <p class="text-gray-600 text-sm mb-2">This chart provides a relative comparison of key properties. [10 is highest, 1 is lowest]</p>
+                        <div class="chart-container">
+                            <canvas id="plasticsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>`
+        },
+        { id: 'module-3', title: 'Injection Moulds for Packaging', content: `
+            <h2 class="text-2xl font-bold mb-4">Module 3: Injection Moulds for Packaging</h2>
+            <p class="mb-4 text-gray-700">This module provides a detailed breakdown of the key components of an injection mold, focusing on their design and function for high-volume packaging applications. We will explore how material choice, machining, and engineering tolerances contribute to a successful final product.</p>
+            <hr class="my-4 border-gray-300">
+            <h3 class="text-xl font-semibold mb-2">Core and Cavity</h3>
+            <p class="mb-2">The core and cavity are the most critical components of any mold, as they form the final shape of the plastic part. Materials like **P20 tool steel** or **stainless steel** are used, machined with **CNC Milling** and **EDM**, and finished with **polishing**. Tolerances are extremely tight, often in the range of **$\pm 0.005 \text{ mm}$**.</p>
+            <hr class="my-4 border-gray-300">
+            <h3 class="text-xl font-semibold mb-2">Hot Runner System</h3>
+            <p class="mb-2">A network of heated channels inside the mold that keeps the plastic molten, ensuring it flows efficiently to all cavities. Made of **stainless steel**, it is a complex assembly of manifolds, nozzles, and heating elements, crucial for consistent part quality.</p>
+            <hr class="my-4 border-gray-300">
+            <h3 class="text-xl font-semibold mb-2">Ejection System</h3>
+            <p class="mb-2">A series of pins and plates that push the finished plastic part out of the mold cavity once it has cooled and solidified. Ejector pins are typically made from **H13** or **nitrided steel** and hardened to **45-55 HRC**. Tolerances are very precise, with a clearance of **$0.01 \text{ mm}$ to $0.02 \text{ mm}$**.</p>
+            <hr class="my-4 border-gray-300">
+            <h3 class="text-xl font-semibold mb-2">Mold Base</h3>
+            <p class="mb-2">The framework of the mold that houses and supports all the other components. It is a standard, off-the-shelf component made from **mild steel** (e.g., AISI 1020), chosen for its low cost and good machinability.</p>`
+        },
+        { id: 'module-4', title: 'Moulding Defects', content: `
+            <h2 class="text-2xl font-bold mb-4">Module 4: Common Moulding Defects and Troubleshooting</h2>
+            <p class="mb-4 text-gray-700">This module focuses on recognizing common issues that arise during the injection molding process. Understanding these is key to ensuring high-quality output. Click a button below for AI-powered troubleshooting tips!</p>
+            <div id="defects-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>`
+        },
+        { id: 'module-5', title: 'Toolroom Machinery & Processes', content: `
+            <h2 class="text-2xl font-bold mb-4">Module 5: Toolroom Machinery and Processes</h2>
+            <p class="mb-4 text-gray-700">This module covers the practical side of toolmaking, focusing on the machinery and processes used to create molds. This content is crucial for understanding how a design on a screen becomes a physical tool.</p>
+            <h3 class="text-xl font-semibold mb-2">Basic Machining Operations</h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-800">
+                <li><b>Lathe Machine:</b> Used for creating cylindrical components.</li>
+                <li><b>Radial Drilling Machine:</b> Designed to drill holes in heavy, bulky mold plates.</li>
+                <li><b>CNC Lathe Machine:</b> A computer-controlled version of the traditional lathe for high-precision, repeatable work.</li>
+            </ul>
+            <hr class="my-4 border-gray-300">
+            <h3 class="text-xl font-semibold mb-2">Advanced Machining & Surface Finishing</h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-800">
+                <li><b>CNC Milling:</b> The primary method for creating the core and cavity shapes.</li>
+                <li><b>Surface Grinding:</b> Used to achieve extremely flat and parallel surfaces.</li>
+                <li><b>Cylindrical Grinding:</b> Used for high-precision finishing of cylindrical parts.</li>
+            </ul>
+            <hr class="my-4 border-gray-300">
+            <h3 class="text-xl font-semibold mb-2">Specialized Processes</h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-800">
+                <li><b>EDM (Electrical Discharge Machining):</b> A non-contact process for creating intricate features.</li>
+                <li><b>Wirecut (Wire EDM):</b> Uses a thin wire to cut complex 2D profiles.</li>
+                <li><b>Laser Engraving:</b> For etching logos or textures.</li>
+                <li><b>Polishing:</b> Creates a smooth, mirror-like finish.</li>
+                <li><b>Heat Treatment & Nitriding:</b> Used to increase hardness and wear resistance.</li>
+            </ul>`
+        },
+        { id: 'module-6', title: 'Quality Control & Metrology', content: `
+            <h2 class="text-2xl font-bold mb-4">Module 6: Quality Control and Metrology</h2>
+            <p class="mb-4 text-gray-700">Quality is paramount. This module teaches the fundamentals of measurement and the use of precision equipment to ensure every part meets specification.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">Basic Metrology</h3>
+                    <ul class="list-disc list-inside space-y-2 text-gray-800">
+                        <li><b>Vernier Calipers:</b> For general-purpose dimensional measurement.</li>
+                        <li><b>Micrometers:</b> For highly precise measurement of thickness and diameter.</li>
+                        <li><b>Height Gauges:</b> For measuring vertical dimensions from a reference surface.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">Advanced Equipment</h3>
+                    <ul class="list-disc list-inside space-y-2 text-gray-800">
+                        <li><b>Coordinate Measuring Machine (CMM):</b> For measuring complex 3D geometry.</li>
+                        <li><b>Optical Comparator:</b> For inspecting part profiles against a master drawing.</li>
+                        <li><b>Hardness & Surface Finish Testers:</b> To verify heat treatment and polish quality.</li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="my-4 border-gray-300">
+            <h3 class="text-xl font-semibold mb-2">Specialized Testing & Gauging</h3>
+            <p class="mb-2">These tools are used to test the functional performance and specific characteristics of a molded part.</p>
+            <ul class="list-disc list-inside space-y-2 text-gray-800">
+                <li>
+                    <b>Vacuum Tester:</b> A machine used to test the seal integrity of a container or closure. It pulls a vacuum on a sealed part to check for leaks, ensuring the product inside remains protected.
+                </li>
+                <li>
+                    <b>Push-Pull Machine:</b> This is used to test the force required to open or close a part, such as a snap-fit lid or a threaded cap. It ensures that the part functions correctly and is not too difficult or too easy for the end user to operate.
+                </li>
+                <li>
+                    <b>Go/No-Go Gauges:</b> These are simple, specialized inspection tools that provide a quick way to check if a feature on a part is within its specified tolerance range. A "Go" side of the gauge will fit the part, while a "No-Go" side will not, providing a fast pass/fail result without needing a specific measurement.
+                </li>
+            </ul>`
+        },
+        { id: 'module-7', title: 'Project Management', content: `
+            <h2 class="text-2xl font-bold mb-4">Module 7: Project Management</h2>
+            <p class="mb-4 text-gray-700">This module covers the essential project management skills needed to track progress and meet deadlines in a busy toolroom environment.</p>
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-2">Gantt Charts</h3>
+                <p class="mb-2">A Gantt chart is a visual representation of a project schedule, used for tracking tasks, dependencies, and progress against a timeline.</p>
+                <h4 class="font-semibold">Creating a Gantt Chart in Excel:</h4>
+                <ul class="list-disc list-inside space-y-1 text-gray-800">
+                    <li>Set up a simple chart using stacked bar charts.</li>
+                    <li>Key Excel functions to use: DATE, WORKDAY, and conditional formatting.</li>
+                </ul>
+            </div>`
+        },
+        { id: 'module-8', title: 'Advanced AutoCAD Skills', content: `
+            <h2 class="text-2xl font-bold mb-4">Module 8: Advanced AutoCAD Skills</h2>
+            <p class="mb-4 text-gray-700">This module goes beyond basic drafting to focus on the specific skills needed for toolroom design, ensuring precision and efficiency.</p>
+             <div class="space-y-4">
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">Advanced 2D Drafting</h3>
+                    <p>Use of layers, blocks, and templates for efficiency. Creating detailed assembly and component drawings.</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">3D Modeling</h3>
+                    <p>Creating and editing 3D solid models of mold components. Generating cross-sections and detailed views from 3D models.</p>
+                </div>
+                 <div>
+                    <h3 class="text-xl font-semibold mb-2">Geometric Dimensioning and Tolerancing (GD&T)</h3>
+                    <p>Interpreting and applying GD&T symbols to ensure parts meet functional requirements and understanding tolerance stacks.</p>
+                </div>
+            </div>`
+        },
+        { id: 'module-9', title: 'Intro to NX for 3D Viewing', content: `
+            <h2 class="text-2xl font-bold mb-4">Module 9: Introduction to NX for 3D Viewing</h2>
+            <p class="mb-4 text-gray-700">This module provides a basic overview of Siemens NX, a powerful CAD software, focusing on essential viewing and navigation skills.</p>
+            <div class="space-y-4">
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">NX Interface and Navigation</h3>
+                    <p>Understanding the ribbon interface and mouse controls for panning, zooming, and rotating models.</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">Basic Operations</h3>
+                    <p>Opening/saving part files, using the 'Part Navigator', and hiding/showing components.</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">Measurement and Analysis</h3>
+                    <p>Using basic measurement tools and creating section cuts to inspect internal geometry.</p>
+                </div>
+            </div>`
+        },
+        { id: 'module-10', title: 'Toolroom Terminology Glossary', content: `
+            <h2 class="text-2xl font-bold mb-4">Module 10: Toolroom Terminology Glossary</h2>
+            <p class="mb-4 text-gray-700">Use this glossary as a quick reference for common words and phrases used in the toolroom. Use the search bar to quickly find terms.</p>
+            <input type="text" id="glossary-search" placeholder="Search terms..." class="w-full p-2 border border-gray-300 rounded-md mb-4">
+            <dl id="glossary-list" class="space-y-4"></dl>`
+        },
+        { id: 'module-11', title: 'Professional Development', content: `
+            <h2 class="text-2xl font-bold mb-4">Module 11: Professional Development & Soft Skills</h2>
+            <p class="mb-4 text-gray-700">A good engineer needs more than just technical knowledge. This module covers crucial soft skills for a successful career.</p>
+            <div class="space-y-4">
+                <div>
+                    <h3 class="text-xl font-semibold">Problem-Solving and Troubleshooting</h3>
+                    <p>Adopting a systematic approach to diagnosing and resolving issues during mold manufacturing.</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold">Communication</h3>
+                    <p>Practicing effective communication with managers, senior engineers, and clients, with an emphasis on clear documentation.</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold">Continuous Learning</h3>
+                    <p>Staying updated with new technologies, materials, and processes through mentorship and knowledge sharing.</p>
+                </div>
+            </div>`
+        },
+        { id: 'module-12', title: 'Metallurgy: Steels & Heat Treatment', content: `
+            <h2 class="text-2xl font-bold mb-4">Module 12: Metallurgy - Steels & Heat Treatment</h2>
+            <p class="mb-4 text-gray-700">This module explores the properties of the steel used to build molds and the post-processing methods that enhance their performance.</p>
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">Common Mold Steels</h3>
+                    <p class="mb-2">Selecting the correct steel is crucial for mold longevity and part quality. Each type has a unique set of properties.</p>
+                    <ul class="list-disc list-inside space-y-1 text-gray-800">
+                        <li><b>P20 (AISI P20):</b> A pre-hardened mold steel for most plastics.</li>
+                        <li><b>H13 (AISI H13):</b> A hot work tool steel with high toughness and resistance to thermal fatigue.</li>
+                        <li><b>Stainless Steel (e.g., SS 2083):</b> Corrosion-resistant, ideal for molding corrosive plastics.</li>
+                        <li><b>Mild Steel (MS):</b> Used for non-critical mold base components.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">Post-Processing & Coatings</h3>
+                    <p class="mb-2">These processes improve surface hardness, wear resistance, and reduce friction.</p>
+                    <ul class="list-disc list-inside space-y-1 text-gray-800">
+                        <li><b>Heat Treatment:</b> Alters the steel's microstructure to improve properties.</li>
+                        <li><b>Nitriding:</b> A low-temperature heat treatment that creates a very hard surface layer.</li>
+                        <li><b>Coatings:</b> Thin layers (e.g., Titanium Nitride) to reduce friction and prevent corrosion.</li>
+                    </ul>
+                </div>
+                <div class="flex justify-center">
+                    <img src="https://placehold.co/400x300/EAE0D5/386641?text=Steel+Mold+Core" alt="Placeholder image of a steel mold core" class="rounded-lg">
+                </div>
+            </div>`
+        }
+    ];
+
+    let currentSlideIndex = 0;
+    const slidesContainer = document.getElementById('slides-container');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+
+    const modalBackdrop = document.getElementById('modal-backdrop');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+
+    async function generateContentWithGemini(userPrompt, systemPrompt) {
+        modalTitle.textContent = 'Generating...';
+        modalBody.innerHTML = '<div class="flex justify-center items-center"><div class="spinner"></div></div>';
+        modalBackdrop.classList.remove('hidden');
+        modalBackdrop.classList.add('flex');
+
+        const apiKey = "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+        const payload = {
+            contents: [{ parts: [{ text: userPrompt }] }],
+            tools: [{ "google_search": {} }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+        };
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || "Could not generate content. Please try again.";
+            return text;
+        } catch (error) {
+            console.error('Error calling Gemini API:', error);
+            return "An error occurred while generating content. Please check the console for details.";
+        }
+    }
+
+    function showModal(title, content) {
+        modalTitle.textContent = title;
+        modalBody.innerHTML = content;
+        modalBackdrop.classList.remove('hidden');
+        modalBackdrop.classList.add('flex');
+    }
+
+    closeModalBtn.addEventListener('click', () => {
+        modalBackdrop.classList.remove('flex');
+        modalBackdrop.classList.add('hidden');
+    });
+
+    function renderSlides() {
+        slidesContainer.innerHTML = '';
+        curriculumData.forEach((slide, index) => {
+            const slideDiv = document.createElement('div');
+            slideDiv.id = slide.id;
+            slideDiv.className = `slide ${index === currentSlideIndex ? 'active' : ''}`;
+            
+            // Add quiz button to all slides
+            const quizButtonHtml = `
+                <div class="mt-8 pt-4 border-t border-gray-300">
+                    <button class="generate-quiz-btn px-6 py-3 bg-[#A7C957] text-white font-semibold rounded-full shadow-lg hover:bg-[#8da747] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#A7C957]">
+                        ✨ Generate Quiz
+                    </button>
+                </div>
+            `;
+            slideDiv.innerHTML = slide.content + quizButtonHtml;
+            slidesContainer.appendChild(slideDiv);
+        });
+    }
+
+    function showSlide(index) {
+        document.querySelectorAll('.slide').forEach(slide => slide.classList.remove('active'));
+        const slideToShow = document.querySelectorAll('.slide')[index];
+        if (slideToShow) {
+            slideToShow.classList.add('active');
+            window.scrollTo(0, 0);
+
+            // Initialize interactive elements based on the current slide ID
+            if (slideToShow.id === 'module-2') {
+                initPlasticsChart();
+            } else if (slideToShow.id === 'module-4') {
+                initDefectsGrid();
+            } else if (slideToShow.id === 'module-10') {
+                initGlossary();
+            }
+        }
+        updateNavigationButtons();
+    }
+
+    function updateNavigationButtons() {
+        prevBtn.disabled = currentSlideIndex === 0;
+        nextBtn.disabled = currentSlideIndex === curriculumData.length - 1;
+    }
+
+    nextBtn.addEventListener('click', () => {
+        if (currentSlideIndex < curriculumData.length - 1) {
+            currentSlideIndex++;
+            showSlide(currentSlideIndex);
+        }
+    });
+
+    prevBtn.addEventListener('click', () => {
+        if (currentSlideIndex > 0) {
+            currentSlideIndex--;
+            showSlide(currentSlideIndex);
+        }
+    });
+
+    // --- Interactive Element Initializers ---
+    let plasticsChartInstance = null;
+    function initPlasticsChart() {
+        const plasticsData = {
+            PP: { name: "Polypropylene (PP)", desc: "A versatile and cost-effective polymer known for its flexibility, chemical resistance, and use in living hinges.", propsList: ["Density: 0.90 - 0.91 g/cm³ (Low)", "Melting Point: ~160°C", "Processing Temp: 200°C - 270°C", "Shrinkage: 1.5% - 2.0% (High)"], examples: ["Living hinges on bottle caps", "Food containers and tubs"], chartData: [2, 8, 7], image: "https://placehold.co/400x300/EAE0D5/386641?text=Polypropylene+Products" },
+            PE: { name: "Polyethylene (PE)", desc: "The most common plastic, available in various densities like HDPE (rigid) and LDPE (flexible).", propsList: ["Density: 0.94 - 0.96 g/cm³ (HDPE) / 0.91 - 0.94 g/cm³ (LDPE)", "Melting Point: ~135°C (HDPE) / ~115°C (LDPE)", "Processing Temp: 180°C - 280°C", "Shrinkage: 1.5% - 4.0% (Very High)"], examples: ["High-density: Milk jugs, shampoo bottles", "Low-density: Grocery bags, cling wrap"], chartData: [3, 4, 8], image: "https://placehold.co/400x300/EAE0D5/386641?text=Polyethylene+Products" },
+            PET: { name: "Polyethylene Terephthalate (PET)", desc: "Known for its excellent clarity, strength, and barrier properties, making it ideal for beverage bottles.", propsList: ["Density: 1.37 g/cm³ (High)", "Melting Point: ~255°C", "Processing Temp: 260°C - 280°C", "Shrinkage: 0.2% - 0.4% (Very Low)"], examples: ["Beverage bottles (water, soda)", "Food jars"], chartData: [8, 3, 9], image: "https://placehold.co/400x300/EAE0D5/386641?text=PET+Beverage+Bottles" },
+            PS: { name: "Polystyrene (PS)", desc: "A rigid, brittle, and transparent plastic often used for disposable packaging and containers.", propsList: ["Density: 1.05 g/cm³", "Melting Point: ~240°C", "Processing Temp: 180°C - 250°C", "Shrinkage: 0.3% - 0.6% (Low)"], examples: ["Disposable cutlery", "Yogurt cups"], chartData: [6, 9, 3], image: "https://placehold.co/400x300/EAE0D5/386641?text=Polystyrene+Cutlery" },
+            HDPE: { name: "High-Density Polyethylene (HDPE)", desc: "A polymer with a high strength-to-density ratio, making it rigid and durable. It is resistant to many solvents and has a higher melting point than LDPE.", propsList: ["Density: 0.94 - 0.96 g/cm³", "Melting Point: 120°C - 180°C", "Processing Temp: 180°C - 280°C", "Shrinkage: 1.5% - 3.5%"], examples: ["Milk jugs and other food containers", "Detergent bottles and bleach containers"], chartData: [7, 5, 8], image: "https://placehold.co/400x300/EAE0D5/386641?text=HDPE+Products" },
+            LDPE: { name: "Low-Density Polyethylene (LDPE)", desc: "Known for its low density and high flexibility. It has excellent resistance to acids and alcohols and is very tough and puncture-resistant.", propsList: ["Density: 0.91 - 0.94 g/cm³", "Melting Point: 105°C - 115°C", "Processing Temp: 160°C - 260°C", "Shrinkage: 1.5% - 4.0%"], examples: ["Plastic bags and sacks", "Flexible films, cling wrap, and liners"], chartData: [4, 9, 9], image: "https://placehold.co/400x300/EAE0D5/386641?text=LDPE+Products" },
+            ABS: { name: "Acrylonitrile Butadiene Styrene (ABS)", desc: "An opaque engineering thermoplastic known for its excellent impact resistance, toughness, and dimensional stability. Its properties make it ideal for durable, rigid parts.", propsList: ["Density: 1.04 - 1.07 g/cm³", "Melting Point: 200°C - 240°C", "Processing Temp: 220°C - 250°C", "Shrinkage: 0.5% - 0.7%"], examples: ["LEGO blocks", "Electronics housings"], chartData: [8, 4, 10], image: "https://placehold.co/400x300/EAE0D5/386641?text=ABS+Products" },
+            SAN: { name: "Styrene Acrylonitrile (SAN)", desc: "A transparent plastic known for its excellent clarity, rigidity, and chemical resistance. It is often used as a substitute for acrylic and other transparent plastics.", propsList: ["Density: 1.07 g/cm³", "Melting Point: ~240°C", "Processing Temp: 180°C - 250°C", "Shrinkage: 0.3% - 0.6%"], examples: ["Blender jars", "Refrigerator shelves"], chartData: [9, 8, 5], image: "https://placehold.co/400x300/EAE0D5/386641?text=SAN+Products" },
+            Delrin: { name: "Delrin (POM - Polyoxymethylene)", desc: "A high-performance engineering plastic known for its high stiffness, low friction, and excellent wear resistance. It is often used for precision mechanical parts.", propsList: ["Density: 1.41 g/cm³", "Melting Point: 175°C", "Processing Temp: 190°C - 210°C", "Shrinkage: 2.0% - 2.5%"], examples: ["Gears, bearings, and bushings", "Zippers and buckles"], chartData: [10, 3, 7], image: "https://placehold.co/400x300/EAE0D5/386641?text=Delrin+Products" }
+        };
+
+        if (plasticsChartInstance) {
+            plasticsChartInstance.destroy();
+        }
+
+        const ctx = document.getElementById('plasticsChart').getContext('2d');
+        plasticsChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Strength', 'Flow (MFI)', 'Impact Resistance'],
+                datasets: [{
+                    label: 'Relative Property Value',
+                    data: plasticsData.PP.chartData,
+                    backgroundColor: ['#386641', '#6A994E', '#A7C957'],
+                    borderColor: '#FDF8F0',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: { beginAtZero: true, max: 10 },
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        const selector = document.getElementById('plastic-selector');
+        const plasticTitleEl = document.getElementById('plastic-title');
+        const plasticDescEl = document.getElementById('plastic-description');
+        const propertiesListEl = document.getElementById('plastic-properties-list');
+        const examplesListEl = document.getElementById('plastic-examples-list');
+        const imageContainerEl = document.getElementById('plastic-image-container');
+
+        function updateContent(selectedPlastic) {
+            const data = plasticsData[selectedPlastic];
+            plasticTitleEl.textContent = data.name;
+            plasticDescEl.textContent = data.desc;
+            propertiesListEl.innerHTML = data.propsList.map(prop => `<li>${prop}</li>`).join('');
+            examplesListEl.innerHTML = data.examples.map(ex => `<li>${ex}</li>`).join('');
+            
+            const imageHtml = `<div class="rounded-lg overflow-hidden mt-4"><img src="${data.image}" class="w-full h-auto object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x300/EAE0D5/386641?text=Image+Not+Found';" alt="Examples of ${data.name} products"></div>`;
+            imageContainerEl.innerHTML = imageHtml;
+            
+            plasticsChartInstance.data.datasets[0].data = data.chartData;
+            plasticsChartInstance.update();
+        }
+
+        selector.addEventListener('change', (e) => updateContent(e.target.value));
+        updateContent('PP');
+    }
+
+    function initDefectsGrid() {
+        const defects = [
+            { name: 'Short Shot', def: 'The molded part is incomplete because the mold cavity was not filled completely.' },
+            { name: 'Flash', def: 'Excess plastic that leaks from the mold parting line, creating a thin web.' },
+            { name: 'Warping', def: 'The part is twisted or bent due to uneven cooling or internal stresses.' },
+            { name: 'Sink Marks', def: 'Depressions on the surface of the part, often in thicker sections.' },
+            { name: 'Weld Lines', def: 'A visible line where two melt flows meet and fail to fuse properly.' },
+            { name: 'Burn Marks', def: 'Black or brown scorch marks on the part caused by trapped, superheated air.' }
+        ];
+        const grid = document.getElementById('defects-grid');
+        grid.innerHTML = defects.map(d => `
+            <div class="bg-white p-4 rounded-lg shadow-md flex flex-col justify-between h-full">
+                <div>
+                    <h4 class="font-bold text-lg text-[#386641]">${d.name}</h4>
+                    <p class="text-gray-700">${d.def}</p>
+                </div>
+                <button class="troubleshoot-btn mt-4 px-4 py-2 bg-[#8da747] text-white font-semibold rounded-full shadow-md hover:bg-[#6a994e] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#8da747]">
+                    ✨ Troubleshooting
+                </button>
+            </div>
+        `).join('');
+
+        document.querySelectorAll('.troubleshoot-btn').forEach((btn, index) => {
+            btn.addEventListener('click', async () => {
+                const defectName = defects[index].name;
+                const userPrompt = `Provide a detailed, step-by-step troubleshooting guide for the injection molding defect: ${defectName}. Focus on common causes related to machinery, material, and mold design, and provide actionable solutions.`;
+                const systemPrompt = "You are a world-class senior toolroom technician with decades of experience. Provide clear, professional, and practical advice.";
+                const troubleshootingText = await generateContentWithGemini(userPrompt, systemPrompt);
+                showModal(`Troubleshooting: ${defectName}`, `<div class="prose max-w-none text-gray-800">${troubleshootingText}</div>`);
+            });
+        });
+    }
+
+    function initGlossary() {
+        const glossaryData = [
+            { term: 'Cavity', def: 'The female half of the mold that forms the outer surface of the part.' },
+            { term: 'Core', def: 'The male half of the mold that forms the inner surface of the part.' },
+            { term: 'Parting Line', def: 'The line on the molded part where the two halves of the mold meet.' },
+            { term: 'Runner', def: 'The channel in the mold that carries the molten plastic from the sprue to the gate.' },
+            { term: 'Gate', def: 'The small opening at the end of the runner where the plastic enters the cavity.' },
+            { term: 'Sprue', def: 'The main channel through which molten plastic flows from the machine nozzle.' },
+            { term: 'Ejector Pins', def: 'Pins used to push the finished part out of the mold cavity.' },
+            { term: 'Draft', def: 'The angle applied to the sides of a part to make it easier to eject from the mold.' },
+            { term: 'Undercut', def: 'A feature that prevents a part from being ejected from a straight-pull mold.' },
+            { term: 'Cycle Time', def: 'The total time required to complete one full injection molding cycle.' },
+            { term: 'CNC', def: 'Computer Numerical Control.' },
+            { term: 'EDM', def: 'Electrical Discharge Machining.' }
+        ];
+        const searchInput = document.getElementById('glossary-search');
+        const listContainer = document.getElementById('glossary-list');
+
+        function renderGlossary(filter = '') {
+            const filteredData = glossaryData.filter(item => 
+                item.term.toLowerCase().includes(filter.toLowerCase()) || 
+                item.def.toLowerCase().includes(filter.toLowerCase())
+            );
+            listContainer.innerHTML = filteredData.map(item => `
+                <div>
+                    <dt class="font-bold text-lg text-[#386641]">${item.term}</dt>
+                    <dd class="ml-4 text-gray-700">${item.def}</dd>
+                </div>
+            `).join('');
+        }
+
+        searchInput.addEventListener('input', (e) => renderGlossary(e.target.value));
+        renderGlossary();
+    }
+    
+    // --- Initial Render & Event Listeners ---
+    document.addEventListener('DOMContentLoaded', () => {
+        renderSlides();
+        showSlide(currentSlideIndex);
+
+        document.body.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('generate-quiz-btn')) {
+                const slideTitle = curriculumData[currentSlideIndex].title;
+                const slideContent = curriculumData[currentSlideIndex].content;
+                const userPrompt = `Generate a short, 3-question multiple-choice quiz about the following topic: ${slideTitle}. Use the provided content as a basis for the questions. Provide the correct answers. Format the output clearly.`;
+                const systemPrompt = "You are a knowledgeable educator creating a quiz to test student understanding. Keep the questions clear and concise.";
+                const quizText = await generateContentWithGemini(userPrompt, systemPrompt);
+                showModal(`Quiz: ${slideTitle}`, `<div class="prose max-w-none text-gray-800">${quizText}</div>`);
+            }
+        });
+    });
+</script>
+</body>
+</html>
